@@ -1,5 +1,5 @@
 "use client";
-import { useRefinementList } from "react-instantsearch";
+import { useRefinementList } from "react-instantsearch-hooks-web";
 
 export default function ExtraOptions() {
   const {
@@ -11,9 +11,6 @@ export default function ExtraOptions() {
     isShowingMore,
   } = useRefinementList({
     attribute: "meta.custom.extra_options",
-    searchable: true,
-    limit: 10,
-    showMore: true,
   });
 
   return (

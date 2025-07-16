@@ -1,5 +1,5 @@
 "use client";
-import { useRefinementList } from "react-instantsearch";
+import { useRefinementList } from "react-instantsearch-hooks-web";
 
 export default function FuelPills() {
   const { items, refine } = useRefinementList({ attribute: "meta.custom.fuel" });

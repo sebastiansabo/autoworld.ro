@@ -1,5 +1,5 @@
 "use client";
-import { useRange } from "react-instantsearch";
+import { useRange } from "react-instantsearch-hooks-web";
 import { useState } from "react";
 
 export default function YearRange() {

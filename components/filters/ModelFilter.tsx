@@ -1,52 +1,22 @@
+// components/filters/ModelFilter.tsx
 "use client";
-import { useRefinementList } from "react-instantsearch";
+import React, { useEffect } from "react";
+import { FacetFilter } from "./FacetFilter";
 
-export default function ModelFilter() {
-  const {
-    items,
-    refine,
-    searchForItems,
-    canToggleShowMore,
-    toggleShowMore,
-    isShowingMore,
-  } = useRefinementList({
-    attribute: "meta.custom.model",
-    searchable: true,
-    limit: 10,
-    showMore: true,
-  });
+export const ModelFilter: React.FC<{
+  onSelectionChange: (models: string[]) => void;
+}> = ({ onSelectionChange }) => {
+  useEffect(() => {
+    // Reset models if the make changes (parent handles make filter!)
+    onSelectionChange([]);
+  }, [onSelectionChange]);
 
   return (
-    <div>
-      <h4 className="font-bold mb-1">Model</h4>
-      <input
-        type="search"
-        placeholder="Cauta model"
-        onChange={e => searchForItems(e.target.value)}
-        className="w-full border rounded px-2 py-1 mb-2"
-      />
-      <ul className="space-y-1">
-        {items.map(item => (
-          <li key={item.value}>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={item.isRefined}
-                onChange={() => refine(item.value)}
-                className="mr-2"
-              />
-              <span>
-                {item.label} <span className="text-gray-400">({item.count})</span>
-              </span>
-            </label>
-          </li>
-        ))}
-      </ul>
-      {canToggleShowMore && (
-        <button onClick={toggleShowMore} className="mt-2 text-xs text-blue-700 underline">
-          {isShowingMore ? "Arata mai putin" : "Arata mai multe"}
-        </button>
-      )}
-    </div>
+    <FacetFilter
+      attribute="meta.custom.model"
+      label="Model"
+      limit={200}
+      onSelectionChange={onSelectionChange}
+    />
   );
-}
+};

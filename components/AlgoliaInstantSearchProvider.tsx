@@ -1,18 +1,20 @@
 "use client";
-import React from "react";
+import React, { ReactNode } from "react";
+import { InstantSearch } from "react-instantsearch-hooks-web";
 import algoliasearch from "algoliasearch/lite";
-import { InstantSearch } from "react-instantsearch";
-
-const ALGOLIA_INDEX_NAME = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'shopify_products';
 
 const searchClient = algoliasearch(
-  "DI49ED2KB7", // Your Algolia App ID
-  "5e6f40ea5dfff82ddc9e5b96bfb5be87" // Your Search-Only API Key
+  "DI49ED2KB7",
+  "262459da0f0135c7498130dd48e9b9f5"
 );
 
-export default function AlgoliaInstantSearchProvider({ children }: { children: React.ReactNode }) {
+interface ProviderProps {
+  children: React.ReactNode;
+}
+
+export default function AlgoliaInstantSearchProvider({ children }: ProviderProps) {
   return (
-    <InstantSearch searchClient={searchClient} indexName={ALGOLIA_INDEX_NAME}>
+    <InstantSearch searchClient={searchClient} indexName="shopify_products">
       {children}
     </InstantSearch>
   );
