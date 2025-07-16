@@ -74,17 +74,19 @@ export default function Page() {
           {viewMode === "infinite" ? <CarGridInfinite /> : <CarGridPagination />}
         </div>
       </div>
-      {modalOpen && (
-        <AlgoliaInstantSearchProvider key="modal-make-model">
-          <MakeModelModal
-            isOpen={modalOpen}
-            initialMake={modalInitialMake}
-            initialModels={modalInitialModels}
-            onConfirm={handleSaveCar}
-            onClose={() => { setModalOpen(false); setEditingIndex(null); }}
-          />
-        </AlgoliaInstantSearchProvider>
-      )}
+      // Example usage:
+{modalOpen && (
+  <AlgoliaInstantSearchProvider key="modal-make-model">
+    <MakeModelModal
+      isOpen={modalOpen}
+      initialMake={editingIndex !== null ? selectedCars[editingIndex]?.make : null}
+      initialModels={editingIndex !== null ? selectedCars[editingIndex]?.models : []}
+      onConfirm={handleSaveCar}
+      onClose={() => { setModalOpen(false); setEditingIndex(null); }}
+    />
+  </AlgoliaInstantSearchProvider>
+)}
+
     </AlgoliaInstantSearchProvider>
   );
 }

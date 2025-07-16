@@ -1,4 +1,3 @@
-"use client";
 import React, { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { useRefinementList, Configure } from "react-instantsearch-hooks-web";
@@ -6,59 +5,52 @@ import carLogos from "@/lib/carLogos";
 
 export const MakeModelModal: React.FC<{
   isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (make: string, models: string[]) => void;
   initialMake?: string | null;
   initialModels?: string[];
+  onClose: () => void;
+  onConfirm: (make: string, models: string[]) => void;
 }> = ({
   isOpen,
-  onClose,
-  onConfirm,
   initialMake = null,
   initialModels = [],
+  onClose,
+  onConfirm,
 }) => {
+  // State
   const [selectedMake, setSelectedMake] = useState<string | null>(initialMake);
   const [selectedModels, setSelectedModels] = useState<string[]>(initialModels);
   const [makeSearch, setMakeSearch] = useState("");
   const [modelSearch, setModelSearch] = useState("");
 
-  // Always reset state on open, using initial values if editing
+  // Reset state to initial values on modal open
   useEffect(() => {
     if (isOpen) {
-      setSelectedMake(initialMake);
-      setSelectedModels(initialModels);
+      setSelectedMake(initialMake ?? null);
+      setSelectedModels(initialModels ?? []);
       setMakeSearch("");
       setModelSearch("");
     }
   }, [isOpen, initialMake, initialModels]);
 
-  // --- Algolia: GET MAKES ---
-  const {
-    items: makes,
-    searchForItems: searchMakes,
-  } = useRefinementList({
+  // Algolia Facet (Makes)
+  const { items: makes, searchForItems: searchMakes } = useRefinementList({
     attribute: "meta.custom.marca",
     limit: 100,
   });
 
-  // --- Algolia: GET MODELS (filtered by make) ---
-  const {
-    items: models,
-    searchForItems: searchModels,
-  } = useRefinementList({
+  // Algolia Facet (Models)
+  const { items: models, searchForItems: searchModels } = useRefinementList({
     attribute: "meta.custom.model",
     limit: 100,
   });
 
-  // --- FILTERED MAKES ---
   const filteredMakes = makeSearch
     ? makes.filter((make) =>
         make.label.toLowerCase().includes(makeSearch.toLowerCase())
       )
     : makes;
 
-  // --- FILTERED MODELS: Only show models of the selected make ---
-  // (Configure puts Algolia context on this make only)
+  // Model filtering is always by label (flat, no make dependency)
   const filteredModels = modelSearch
     ? models.filter((model) =>
         model.label.toLowerCase().includes(modelSearch.toLowerCase())
@@ -72,10 +64,7 @@ export const MakeModelModal: React.FC<{
   }
 
   function handleSelectAllModels() {
-    if (
-      selectedModels.length === filteredModels.length &&
-      filteredModels.length > 0
-    ) {
+    if (selectedModels.length === filteredModels.length && filteredModels.length > 0) {
       setSelectedModels([]);
     } else {
       setSelectedModels(filteredModels.map((m) => m.value));
@@ -95,7 +84,7 @@ export const MakeModelModal: React.FC<{
   return (
     <Modal open={isOpen} onClose={onClose}>
       <div className="p-6 min-w-[350px] max-w-[480px]">
-        {/* MAKE PICKER */}
+        {/* Make picker */}
         {!selectedMake && (
           <>
             <div className="font-bold text-xl mb-4 text-center">Alege marcă</div>
@@ -130,10 +119,10 @@ export const MakeModelModal: React.FC<{
           </>
         )}
 
-        {/* MODEL PICKER */}
+        {/* Model picker */}
         {selectedMake && (
           <>
-            <Configure {...({ facetFilters: [[`meta.custom.marca:${selectedMake}`]] } as any)} />
+            { <Configure facetFilters={[["meta.custom.marca:" + selectedMake]]}/> }
             <div className="flex items-center justify-between mb-3">
               <button
                 onClick={() => {
