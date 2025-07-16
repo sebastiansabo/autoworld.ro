@@ -12,6 +12,12 @@ export default function Page() {
   const [selectedCars, setSelectedCars] = useState<{ make: string; models: string[] }[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // What car should be loaded in the modal? (edit or add)
+  const isEditing = editingIndex !== null;
+  const modalInitialMake = isEditing ? selectedCars[editingIndex!]?.make : null;
+  const modalInitialModels = isEditing ? selectedCars[editingIndex!]?.models : [];
+
   const [viewMode, setViewMode] = useState<"pagination" | "infinite">("infinite");
 
   // Handler: Remove a car (from filter list)
@@ -31,12 +37,8 @@ export default function Page() {
     setEditingIndex(null);
   };
 
-  // --- KEY PART: only use MODELS for search results ---
-  //  - User can select multiple "cards" (each card is a {make, models[]})
-  //  - All selected models (across all cards) are OR-ed together.
+  // Only use MODELS for search results
   const allSelectedModels: string[] = selectedCars.flatMap(card => card.models);
-
-  // Algolia expects: [["meta.custom.model:model1", ...]] for OR filter.
   const facetFilters =
     allSelectedModels.length > 0
       ? [allSelectedModels.map(model => `meta.custom.model:${model}`)]
@@ -76,6 +78,8 @@ export default function Page() {
         <AlgoliaInstantSearchProvider key="modal-make-model">
           <MakeModelModal
             isOpen={modalOpen}
+            initialMake={modalInitialMake}
+            initialModels={modalInitialModels}
             onConfirm={handleSaveCar}
             onClose={() => { setModalOpen(false); setEditingIndex(null); }}
           />

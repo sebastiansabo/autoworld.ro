@@ -8,21 +8,29 @@ export const MakeModelModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (make: string, models: string[]) => void;
-}> = ({ isOpen, onClose, onConfirm }) => {
-  const [selectedMake, setSelectedMake] = useState<string | null>(null);
-  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  initialMake?: string | null;
+  initialModels?: string[];
+}> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  initialMake = null,
+  initialModels = [],
+}) => {
+  const [selectedMake, setSelectedMake] = useState<string | null>(initialMake);
+  const [selectedModels, setSelectedModels] = useState<string[]>(initialModels);
   const [makeSearch, setMakeSearch] = useState("");
   const [modelSearch, setModelSearch] = useState("");
 
-  // RESET STATE every time modal opens
+  // Always reset state on open, using initial values if editing
   useEffect(() => {
     if (isOpen) {
-      setSelectedMake(null);
-      setSelectedModels([]);
+      setSelectedMake(initialMake);
+      setSelectedModels(initialModels);
       setMakeSearch("");
       setModelSearch("");
     }
-  }, [isOpen]);
+  }, [isOpen, initialMake, initialModels]);
 
   // --- Algolia: GET MAKES ---
   const {
@@ -50,7 +58,7 @@ export const MakeModelModal: React.FC<{
     : makes;
 
   // --- FILTERED MODELS: Only show models of the selected make ---
-  // You MUST use <Configure> to filter Algolia index by make!
+  // (Configure puts Algolia context on this make only)
   const filteredModels = modelSearch
     ? models.filter((model) =>
         model.label.toLowerCase().includes(modelSearch.toLowerCase())
@@ -125,7 +133,6 @@ export const MakeModelModal: React.FC<{
         {/* MODEL PICKER */}
         {selectedMake && (
           <>
-            {/* Key fix: the Configure puts Algolia's context on this make only */}
             <Configure {...({ facetFilters: [[`meta.custom.marca:${selectedMake}`]] } as any)} />
             <div className="flex items-center justify-between mb-3">
               <button
