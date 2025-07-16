@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Modal from "./Modal";
-import { useRefinementList } from "react-instantsearch-hooks-web";
+import { useRefinementList, InstantSearch, Configure } from "react-instantsearch-hooks-web";
 import carLogos from "@/lib/carLogos";
 
 export const MakeModelModal: React.FC<{
@@ -14,7 +14,7 @@ export const MakeModelModal: React.FC<{
   const [makeSearch, setMakeSearch] = useState("");
   const [modelSearch, setModelSearch] = useState("");
 
-  // 1. GET MAKES
+  // 1. GET MAKES from Algolia
   const {
     items: makes,
     searchForItems: searchMakes,
@@ -23,84 +23,110 @@ export const MakeModelModal: React.FC<{
     limit: 100,
   });
 
-  // 2. GET MODELS (all, but we'll filter client-side by selectedMake)
-  const {
-    items: models,
-    searchForItems: searchModels,
-  } = useRefinementList({
-    attribute: "meta.custom.model",
-    limit: 100,
-  });
-
-  // 3. Filter Makes (search support)
-  const filteredMakes = makeSearch
-    ? makes.filter((make) =>
-        make.label.toLowerCase().includes(makeSearch.toLowerCase())
-      )
-    : makes;
-
-  // 4. Filter Models by selectedMake.
-  // Note: models do NOT have a make reference by default in Algolia refinement list,
-  // so you must index models as e.g. "Audi|A4" and split, or keep all models per make and do additional logic,
-  // but for now, if not indexed, you'll see all models.
-  //
-  // For accurate filter: You need to create a custom attribute in your Algolia records, e.g. "meta.custom.model_full": "Audi|A3"
-  // Then use attribute: "meta.custom.model_full", and filter for "Audi|"
-
-  // --- FOR NOW: Show all models (since refinement list only gives values, not linked to make) ---
-  // If your model names are unique per make, this is good enough. Otherwise, you need custom logic or custom attribute.
-  let filteredModels = models;
-  if (selectedMake) {
-    // Optional: if you have a custom field with make included, filter here
-    // Example: models.filter(m => m.label.startsWith(selectedMake))
-    filteredModels = models.filter(m => {
-      // Try to filter only models belonging to the selected make
-      // If your data structure has a clear connection, use it here
-      // For now, just return all models
-      return true;
+  // 2. For models, use a sub-context scoped to the selected make!
+  function ModelPicker() {
+    const {
+      items: models,
+      searchForItems: searchModels,
+    } = useRefinementList({
+      attribute: "meta.custom.model",
+      limit: 100,
     });
-  } else {
-    filteredModels = [];
-  }
 
-  const finalModels = modelSearch
-    ? filteredModels.filter((model) =>
-        model.label.toLowerCase().includes(modelSearch.toLowerCase())
-      )
-    : filteredModels;
+    // Search and filter models
+    const filteredModels = modelSearch
+      ? models.filter((model) =>
+          model.label.toLowerCase().includes(modelSearch.toLowerCase())
+        )
+      : models;
 
-  // 5. Handlers
-  function handleSelectMake(make: string) {
-    setSelectedMake(make);
-    setSelectedModels([]);
-    setModelSearch("");
-  }
-
-  function handleSelectAllModels() {
-    if (
-      selectedModels.length === finalModels.length &&
-      finalModels.length > 0
-    ) {
-      setSelectedModels([]);
-    } else {
-      setSelectedModels(finalModels.map((m) => m.value));
+    function handleSelectAllModels() {
+      if (selectedModels.length === filteredModels.length && filteredModels.length > 0) {
+        setSelectedModels([]);
+      } else {
+        setSelectedModels(filteredModels.map((m) => m.value));
+      }
     }
-  }
 
-  function toggleModel(model: string) {
-    setSelectedModels((models) =>
-      models.includes(model)
-        ? models.filter((m) => m !== model)
-        : [...models, model]
+    function toggleModel(model: string) {
+      setSelectedModels((models) =>
+        models.includes(model)
+          ? models.filter((m) => m !== model)
+          : [...models, model]
+      );
+    }
+
+    const canConfirm = !!selectedMake && selectedModels.length > 0;
+
+    return (
+      <>
+        <input
+          className="w-full p-2 mb-3 border rounded"
+          placeholder="Caută model"
+          value={modelSearch}
+          onChange={e => {
+            setModelSearch(e.target.value);
+            searchModels(e.target.value);
+          }}
+        />
+        <div className="mb-2 flex items-center">
+          <input
+            type="checkbox"
+            className="mr-2"
+            checked={
+              selectedModels.length === filteredModels.length &&
+              filteredModels.length > 0
+            }
+            onChange={handleSelectAllModels}
+            id="selectAllModels"
+          />
+          <label htmlFor="selectAllModels" className="font-semibold cursor-pointer">
+            Toate modelele
+          </label>
+        </div>
+        <ul className="mb-4 max-h-60 overflow-y-auto">
+          {filteredModels.map((model) => (
+            <li key={model.value} className="flex items-center mb-2">
+              <input
+                type="checkbox"
+                className="mr-2"
+                checked={selectedModels.includes(model.value)}
+                onChange={() => toggleModel(model.value)}
+                id={`model-${model.value}`}
+              />
+              <label
+                htmlFor={`model-${model.value}`}
+                className="cursor-pointer flex-1"
+              >
+                {model.label}
+              </label>
+              <span className="ml-2 bg-gray-100 text-xs rounded-full px-2">
+                {model.count}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onClose} className="btn btn-secondary">
+            Cancel
+          </button>
+          <button
+            disabled={!canConfirm}
+            onClick={() => onConfirm(selectedMake!, selectedModels)}
+            className={`btn btn-primary ${!canConfirm ? "opacity-50" : ""}`}
+          >
+            Confirm
+          </button>
+        </div>
+      </>
     );
   }
 
-  const canConfirm = !!selectedMake && selectedModels.length > 0;
-
+  // --- Modal Content ---
   return (
     <Modal open={isOpen} onClose={onClose}>
       <div className="p-4 min-w-[350px] max-w-[450px]">
-        {/* STEP 1: Make selection */}
+        {/* Step 1: Make selection */}
         {!selectedMake && (
           <>
             <div className="font-bold text-xl mb-4 text-center">Alege marcă</div>
@@ -114,10 +140,10 @@ export const MakeModelModal: React.FC<{
               }}
             />
             <ul className="overflow-y-auto max-h-96">
-              {filteredMakes.map((make) => (
+              {makes.map((make) => (
                 <li
                   key={make.value}
-                  onClick={() => handleSelectMake(make.value)}
+                  onClick={() => setSelectedMake(make.value)}
                   className="flex items-center px-2 py-2 cursor-pointer rounded hover:bg-blue-50"
                 >
                   <img
@@ -135,9 +161,16 @@ export const MakeModelModal: React.FC<{
           </>
         )}
 
-        {/* STEP 2: Model selection */}
+        {/* Step 2: Model selection (Algolia context for selected make) */}
         {selectedMake && (
-          <>
+          <InstantSearch
+            searchClient={
+              // use the same client as your top-level provider!
+              require("algoliasearch/lite")("DI49ED2KB7", "262459da0f0135c7498130dd48e9b9f5")
+            }
+            indexName="shopify_products"
+          >
+           <Configure {...({ facetFilters: [[`meta.custom.marca:${selectedMake}`]] } as any)} />
             <div className="flex items-center justify-between mb-3">
               <button
                 onClick={() => {
@@ -160,66 +193,8 @@ export const MakeModelModal: React.FC<{
                 ×
               </button>
             </div>
-            <input
-              className="w-full p-2 mb-3 border rounded"
-              placeholder="Caută model"
-              value={modelSearch}
-              onChange={e => {
-                setModelSearch(e.target.value);
-                searchModels(e.target.value);
-              }}
-            />
-
-            <div className="mb-2 flex items-center">
-              <input
-                type="checkbox"
-                className="mr-2"
-                checked={
-                  selectedModels.length === finalModels.length &&
-                  finalModels.length > 0
-                }
-                onChange={handleSelectAllModels}
-                id="selectAllModels"
-              />
-              <label htmlFor="selectAllModels" className="font-semibold cursor-pointer">
-                Toate modelele
-              </label>
-            </div>
-            <ul className="mb-4 max-h-60 overflow-y-auto">
-              {finalModels.map((model) => (
-                <li key={model.value} className="flex items-center mb-2">
-                  <input
-                    type="checkbox"
-                    className="mr-2"
-                    checked={selectedModels.includes(model.value)}
-                    onChange={() => toggleModel(model.value)}
-                    id={`model-${model.value}`}
-                  />
-                  <label
-                    htmlFor={`model-${model.value}`}
-                    className="cursor-pointer flex-1"
-                  >
-                    {model.label}
-                  </label>
-                  <span className="ml-2 bg-gray-100 text-xs rounded-full px-2">
-                    {model.count}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={onClose} className="btn btn-secondary">
-                Cancel
-              </button>
-              <button
-                disabled={!canConfirm}
-                onClick={() => onConfirm(selectedMake, selectedModels)}
-                className={`btn btn-primary ${!canConfirm ? "opacity-50" : ""}`}
-              >
-                Confirm
-              </button>
-            </div>
-          </>
+            <ModelPicker />
+          </InstantSearch>
         )}
       </div>
     </Modal>
