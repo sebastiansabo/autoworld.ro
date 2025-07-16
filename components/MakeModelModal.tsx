@@ -1,7 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Modal from "./Modal";
-import { useRefinementList, InstantSearch, Configure } from "react-instantsearch-hooks-web";
+import { useRefinementList, Configure } from "react-instantsearch-hooks-web";
 import carLogos from "@/lib/carLogos";
 
 export const MakeModelModal: React.FC<{
@@ -14,7 +14,17 @@ export const MakeModelModal: React.FC<{
   const [makeSearch, setMakeSearch] = useState("");
   const [modelSearch, setModelSearch] = useState("");
 
-  // 1. GET MAKES from Algolia
+  // RESET STATE every time modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedMake(null);
+      setSelectedModels([]);
+      setMakeSearch("");
+      setModelSearch("");
+    }
+  }, [isOpen]);
+
+  // --- Algolia: GET MAKES ---
   const {
     items: makes,
     searchForItems: searchMakes,
@@ -23,110 +33,61 @@ export const MakeModelModal: React.FC<{
     limit: 100,
   });
 
-  // 2. For models, use a sub-context scoped to the selected make!
-  function ModelPicker() {
-    const {
-      items: models,
-      searchForItems: searchModels,
-    } = useRefinementList({
-      attribute: "meta.custom.model",
-      limit: 100,
-    });
+  // --- Algolia: GET MODELS (filtered by make) ---
+  const {
+    items: models,
+    searchForItems: searchModels,
+  } = useRefinementList({
+    attribute: "meta.custom.model",
+    limit: 100,
+  });
 
-    // Search and filter models
-    const filteredModels = modelSearch
-      ? models.filter((model) =>
-          model.label.toLowerCase().includes(modelSearch.toLowerCase())
-        )
-      : models;
+  // --- FILTERED MAKES ---
+  const filteredMakes = makeSearch
+    ? makes.filter((make) =>
+        make.label.toLowerCase().includes(makeSearch.toLowerCase())
+      )
+    : makes;
 
-    function handleSelectAllModels() {
-      if (selectedModels.length === filteredModels.length && filteredModels.length > 0) {
-        setSelectedModels([]);
-      } else {
-        setSelectedModels(filteredModels.map((m) => m.value));
-      }
+  // --- FILTERED MODELS: Only show models of the selected make ---
+  // You MUST use <Configure> to filter Algolia index by make!
+  const filteredModels = modelSearch
+    ? models.filter((model) =>
+        model.label.toLowerCase().includes(modelSearch.toLowerCase())
+      )
+    : models;
+
+  function handleSelectMake(make: string) {
+    setSelectedMake(make);
+    setSelectedModels([]);
+    setModelSearch("");
+  }
+
+  function handleSelectAllModels() {
+    if (
+      selectedModels.length === filteredModels.length &&
+      filteredModels.length > 0
+    ) {
+      setSelectedModels([]);
+    } else {
+      setSelectedModels(filteredModels.map((m) => m.value));
     }
+  }
 
-    function toggleModel(model: string) {
-      setSelectedModels((models) =>
-        models.includes(model)
-          ? models.filter((m) => m !== model)
-          : [...models, model]
-      );
-    }
-
-    const canConfirm = !!selectedMake && selectedModels.length > 0;
-
-    return (
-      <>
-        <input
-          className="w-full p-2 mb-3 border rounded"
-          placeholder="Caută model"
-          value={modelSearch}
-          onChange={e => {
-            setModelSearch(e.target.value);
-            searchModels(e.target.value);
-          }}
-        />
-        <div className="mb-2 flex items-center">
-          <input
-            type="checkbox"
-            className="mr-2"
-            checked={
-              selectedModels.length === filteredModels.length &&
-              filteredModels.length > 0
-            }
-            onChange={handleSelectAllModels}
-            id="selectAllModels"
-          />
-          <label htmlFor="selectAllModels" className="font-semibold cursor-pointer">
-            Toate modelele
-          </label>
-        </div>
-        <ul className="mb-4 max-h-60 overflow-y-auto">
-          {filteredModels.map((model) => (
-            <li key={model.value} className="flex items-center mb-2">
-              <input
-                type="checkbox"
-                className="mr-2"
-                checked={selectedModels.includes(model.value)}
-                onChange={() => toggleModel(model.value)}
-                id={`model-${model.value}`}
-              />
-              <label
-                htmlFor={`model-${model.value}`}
-                className="cursor-pointer flex-1"
-              >
-                {model.label}
-              </label>
-              <span className="ml-2 bg-gray-100 text-xs rounded-full px-2">
-                {model.count}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} className="btn btn-secondary">
-            Cancel
-          </button>
-          <button
-            disabled={!canConfirm}
-            onClick={() => onConfirm(selectedMake!, selectedModels)}
-            className={`btn btn-primary ${!canConfirm ? "opacity-50" : ""}`}
-          >
-            Confirm
-          </button>
-        </div>
-      </>
+  function toggleModel(model: string) {
+    setSelectedModels((models) =>
+      models.includes(model)
+        ? models.filter((m) => m !== model)
+        : [...models, model]
     );
   }
 
-  // --- Modal Content ---
+  const canConfirm = !!selectedMake && selectedModels.length > 0;
+
   return (
     <Modal open={isOpen} onClose={onClose}>
-      <div className="p-4 min-w-[350px] max-w-[450px]">
-        {/* Step 1: Make selection */}
+      <div className="p-6 min-w-[350px] max-w-[480px]">
+        {/* MAKE PICKER */}
         {!selectedMake && (
           <>
             <div className="font-bold text-xl mb-4 text-center">Alege marcă</div>
@@ -140,10 +101,10 @@ export const MakeModelModal: React.FC<{
               }}
             />
             <ul className="overflow-y-auto max-h-96">
-              {makes.map((make) => (
+              {filteredMakes.map((make) => (
                 <li
                   key={make.value}
-                  onClick={() => setSelectedMake(make.value)}
+                  onClick={() => handleSelectMake(make.value)}
                   className="flex items-center px-2 py-2 cursor-pointer rounded hover:bg-blue-50"
                 >
                   <img
@@ -161,16 +122,11 @@ export const MakeModelModal: React.FC<{
           </>
         )}
 
-        {/* Step 2: Model selection (Algolia context for selected make) */}
+        {/* MODEL PICKER */}
         {selectedMake && (
-          <InstantSearch
-            searchClient={
-              // use the same client as your top-level provider!
-              require("algoliasearch/lite")("DI49ED2KB7", "262459da0f0135c7498130dd48e9b9f5")
-            }
-            indexName="shopify_products"
-          >
-           <Configure {...({ facetFilters: [[`meta.custom.marca:${selectedMake}`]] } as any)} />
+          <>
+            {/* Key fix: the Configure puts Algolia's context on this make only */}
+            <Configure {...({ facetFilters: [[`meta.custom.marca:${selectedMake}`]] } as any)} />
             <div className="flex items-center justify-between mb-3">
               <button
                 onClick={() => {
@@ -193,8 +149,65 @@ export const MakeModelModal: React.FC<{
                 ×
               </button>
             </div>
-            <ModelPicker />
-          </InstantSearch>
+            <input
+              className="w-full p-2 mb-3 border rounded"
+              placeholder="Caută model"
+              value={modelSearch}
+              onChange={e => {
+                setModelSearch(e.target.value);
+                searchModels(e.target.value);
+              }}
+            />
+            <div className="mb-2 flex items-center">
+              <input
+                type="checkbox"
+                className="mr-2"
+                checked={
+                  selectedModels.length === filteredModels.length &&
+                  filteredModels.length > 0
+                }
+                onChange={handleSelectAllModels}
+                id="selectAllModels"
+              />
+              <label htmlFor="selectAllModels" className="font-semibold cursor-pointer">
+                Toate modelele
+              </label>
+            </div>
+            <ul className="mb-4 max-h-60 overflow-y-auto">
+              {filteredModels.map((model) => (
+                <li key={model.value} className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    className="mr-2"
+                    checked={selectedModels.includes(model.value)}
+                    onChange={() => toggleModel(model.value)}
+                    id={`model-${model.value}`}
+                  />
+                  <label
+                    htmlFor={`model-${model.value}`}
+                    className="cursor-pointer flex-1"
+                  >
+                    {model.label}
+                  </label>
+                  <span className="ml-2 bg-gray-100 text-xs rounded-full px-2">
+                    {model.count}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={onClose} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button
+                disabled={!canConfirm}
+                onClick={() => onConfirm(selectedMake, selectedModels)}
+                className={`btn btn-primary ${!canConfirm ? "opacity-50" : ""}`}
+              >
+                Confirm
+              </button>
+            </div>
+          </>
         )}
       </div>
     </Modal>

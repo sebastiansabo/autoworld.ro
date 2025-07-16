@@ -1,6 +1,5 @@
-"use client";
-import React, { useState, useEffect } from 'react';
-import { useAlgoliaFacet, FacetItem } from '../../app/hooks/useAlgoliaFacet';
+import React, { useEffect, useState } from "react";
+import { useAlgoliaFacet, FacetItem } from "../../app/hooks/useAlgoliaFacet";
 
 export interface FacetFilterProps {
   attribute: string;
@@ -12,7 +11,7 @@ export interface FacetFilterProps {
 export const FacetFilter: React.FC<FacetFilterProps> = ({
   attribute,
   label,
-  limit = 550, // Start small for fast load
+  limit = 100,
   onSelectionChange,
 }) => {
   const [facetLimit, setFacetLimit] = useState(limit);
@@ -45,7 +44,6 @@ export const FacetFilter: React.FC<FacetFilterProps> = ({
     setSelected(new Set(selected));
   };
 
-  // Show More logic: if items.length === facetLimit and facetLimit < 1000, show button
   const canShowMore = items.length === facetLimit && facetLimit < 1000;
 
   return (
